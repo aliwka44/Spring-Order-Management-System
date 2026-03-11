@@ -14,6 +14,7 @@ import com.example.springorderidtech1.mapper.OrderMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import static com.example.springorderidtech1.mapper.OrderMapper.mapToOrderEntity;
 
@@ -27,7 +28,7 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final CardRepository cardRepository;
 
-
+    @Transactional(noRollbackFor = DataMismatchException.class)
     public void addOrder(OrderRequestDto orderRequestDto) {
 
         // check product details
@@ -39,9 +40,12 @@ public class OrderService {
         checkCardBalance(card, orderRequestDto.getAmount());
 
         product.setStock(product.getStock() - orderRequestDto.getProductCount());
-        productRepository.save(product);
         card.setBalance(card.getBalance() - orderRequestDto.getAmount());
         cardRepository.save(card);
+        productRepository.save(product);
+        if(orderRequestDto.getProductCount() == 1){
+            throw new DataMismatchException("test transactional exception");
+        }
         orderRepository.save(mapToOrderEntity(orderRequestDto));
         log.info("ActionLog.addOrder end for cardId" + orderRequestDto.getCardId());
 
